@@ -50,9 +50,9 @@ Every service's ingestion layer imports `shared/connector` and implements this s
 
 **Why:** every connector across every service (every ATS platform inside Jobs, every sibling service inside Search) has the identical shape, so the fan-out/error-isolation logic (`FetchAll`) is written once instead of per service.
 
-**Not literally generic** — each service defines its own `NormalizedX` type (`NormalizedWeather`, `NormalizedJob`, `IndexEntry`, ...). What's shared is the pattern and the registry helper, not one generic type.
+**Resolved 2026-08-12, with Go generics** — earlier drafts of this doc said "not literally generic," meaning each service would hand-copy its own `Fetch`/`Registry` types. Once actually implemented, that turned out to be a false economy: `shared/connector` now defines `Fetch[T any]` and `Registry[T any]` (struct, holding a `sync.RWMutex` + `map[string]Fetch[T]`) as real generic types, so `Register`'s incremental-add and `FetchAll`'s concurrent fan-out/error-isolation logic are written once and imported everywhere, not copy-pasted per service. `FetchAll` returns `map[string]error` keyed by source name (not the originally-sketched `[]error`), so callers can tell which source failed. `Registry` is always used by pointer (`*Registry[T]`) since it holds a mutex — see `shared/connector/CLAUDE.md` for the full shape.
 
-**Provenance:** this pattern originated in Corvian and is being reused as-is, not redesigned, here.
+**Provenance:** the overall registered-by-name-not-switch pattern originated in Corvian and is being reused as-is; the generics-based construction was worked out fresh for this repo.
 
 ---
 
@@ -79,6 +79,22 @@ Every domain service is called concurrently with its own bounded timeout (2s sta
 `GET /search?q=...` routes straight through to the Search service instead of joining the Weather/Stocks/Jobs/etc. batch.
 
 **Why:** it's a different request shape — an on-demand typed query, not one of the fixed dashboard sections.
+
+---
+
+## Gateway: Claude-generated daily briefing — scheduled refresh, not per-request
+
+`GET /briefing` returns a short Claude-written narrative synthesizing the current `DashboardView` (weather, stocks, jobs, holidays). Generation happens on a background ticker inside `cmd/api` — gateway's second documented exception to "no `cmd/worker`" (see the Stocks relay decision above for the first) — not per HTTP request.
+
+**Why scheduled + cached, not on-demand:** token cost should scale with a refresh interval, not with how often the dashboard gets loaded — same reasoning as weather's shadow-key refresh cadence. The cache is in-memory only (mutex-protected struct, no Redis), since losing it on a gateway restart is a non-issue — the next tick regenerates it.
+
+**Rejected: generating fresh on every request.** Simplest to build, but cost scales directly with request volume — exactly what a token-cost-conscious feature shouldn't do.
+
+**Rejected: folding the briefing into the main `DashboardView` response.** Kept as a separate endpoint instead, same treatment as `/search`. A briefing failure or staleness then never affects the core dashboard sections, and it's opt-in for callers who don't want it.
+
+**Failure handling reuses the existing degradation pattern:** if a scheduled refresh fails (API error, rate limit, `stop_reason: "refusal"`), keep serving the last successful briefing rather than erroring — same "stale beats none" philosophy as scatter-gather's per-section `{"status": "unavailable"}` degradation. `/briefing` only reports unavailable if no generation has ever succeeded.
+
+**Model choice: `claude-sonnet-5` at `output_config.effort: "medium"`** — an explicit, deliberate override of "default to Opus" for cost reasons, made knowingly with a paid Claude membership footing the bill. Thinking left at Sonnet 5's default (adaptive — its only on-mode).
 
 ---
 

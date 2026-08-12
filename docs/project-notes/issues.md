@@ -14,6 +14,8 @@ GitHub issues are the source of truth for backlog/status (`gh issue list --repo 
 
 **Gateway** — #1 (Section interface + registry), #2 (scatter-gather executor), #4 (search passthrough), #5 (Stocks upstream WS relay), #6 (docker-compose port exposure). #2 is the one to build carefully per [[decisions#gateway-scatter-gather]] — `WaitGroup`+mutex, not `errgroup`.
 
+Briefing sub-feature — #27 (cache + refresh goroutine), #28 (Claude client wrapper), #29 (prompt builder), #30 (`GET /briefing` endpoint + config). Natural build order: #29 and #28 can go in parallel, #27 needs both since the refresh goroutine calls the client with a built prompt, #30 last since it just reads #27's cache.
+
 **Jobs** — #3 (Greenhouse), #7 (Lever), #8 (Ashby), #9 (ingestion scheduler + per-company config), #10 (stale-job-closure), #11 (tech keyword filter). Three connectors (#3/#7/#8) are independent and can go in any order; #10 needs at least one connector done first to have something to reconcile against.
 
 **Stocks** — #20 (WS reader + tradeChan), #21 (per-symbol aggregator + `Close()`), #22 (candle flush writer), #23 (watchlist DB + bootstrap endpoint), #24 (reconnect/backoff + reconcileSubscriptions). Build order matters here: #20 before #21 before #22, since each produces the input the next consumes. Watch for the per-tick-write mistake from [[bugs#stocks-per-tick-write]] when wiring #22.

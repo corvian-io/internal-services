@@ -32,6 +32,9 @@ Config structure, endpoints, and constants. This file is checked into git, so it
 - The only service that publishes a port in `docker-compose.yml`.
 - Per-service call timeout in the scatter-gather fan-out: 2s (starting point, not yet measured against real usage).
 - Holds the upstream connection to Stocks' internal `/stocks/stream` WS endpoint and relays to dashboard clients itself.
+- Briefing feature: package `internal/briefing` — `cache.go` (mutex-protected in-memory cache: content + `generatedAt`), `refresh.go` (ticker goroutine started in `cmd/api`'s `main()`, fires once at boot then on interval), `client.go` (Anthropic Go SDK wrapper), `prompt.go` (`DashboardView` → prompt).
+- Briefing env vars: `ANTHROPIC_API_KEY`, model ID (default `claude-sonnet-5`), refresh interval (default 30 min, tunable).
+- Briefing endpoint: `GET /briefing`, separate from the scatter-gather batch.
 
 ## Stocks
 
