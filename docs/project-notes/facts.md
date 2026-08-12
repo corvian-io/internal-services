@@ -70,6 +70,15 @@ Config structure, endpoints, and constants. This file is checked into git, so it
 
 ## Shared connector pattern
 
-- Interface: `type Fetch func(ctx context.Context) ([]NormalizedX, error)`.
-- Registry: `type Registry map[string]Fetch`, one entry per source, no switch statement.
+- Location: `internal/shared/connector` (moved from a root-level `shared/connector` module — see decisions.md; verified Go's `internal/` visibility works across the sibling modules in this repo's `go.work` since it's a pure import-path-prefix check, not a same-module check).
+- Interface: `type Fetch[T any] func(ctx context.Context) ([]T, error)`.
+- Registry: `type Registry[T any] struct { mu sync.RWMutex; fetch map[string]Fetch[T] }`, one entry per source via `Register`, no switch statement.
 - Pattern (and the transactional outbox pattern used by Search, and the stale-job-closure pattern used by Jobs) originated in Corvian and is being reused as-is.
+
+## Shared Postgres config
+
+- Location: `internal/shared/configs` (+ `internal/shared/constants` for the env var name table) — same `internal/shared` module as the connector pattern.
+- `configs.NewConfig()` / `configs.NewDbConfig()` build a `db.DbConfig` (host/port/user/password/dbname/sslmode/schema) from env vars, panicking via `GetEnvOrPanic` on anything missing.
+- Env vars: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`, `DB_SCHEMA` (see `constants.EnvKeys`).
+- External dependency: `github.com/akhakpouri/gorm-kit` for the `DbConfig` type itself, plus `godotenv` for local `.env` loading.
+- Not wired into any service yet — added ahead of stocks/jobs/holidays/search needing it, all four being Postgres-backed.

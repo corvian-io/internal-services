@@ -29,6 +29,8 @@ func (r *Registry[T]) Register(name string, f Fetch[T]) {
 
 // for each name, fetch pair in r.fetch, go swpans a goroutine that calls fetch(ctx) one-by-one
 func (r *Registry[T]) FetchAll(ctx context.Context) ([]T, map[string]error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
 	type event struct {
 		key string
@@ -45,9 +47,6 @@ func (r *Registry[T]) FetchAll(ctx context.Context) ([]T, map[string]error) {
 
 	var wg sync.WaitGroup
 	var mutex sync.Mutex
-
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 
 	var result []T
 	errors := make(map[string]error)

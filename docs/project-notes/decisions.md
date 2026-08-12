@@ -98,6 +98,14 @@ Every domain service is called concurrently with its own bounded timeout (2s sta
 
 ---
 
+## `internal/shared` gains a uniform Postgres config loader (`configs` + `constants`)
+
+Alongside the connector pattern, `internal/shared` now also holds `configs` (env-var-driven `DbConfig` construction: host/port/user/password/dbname/sslmode/schema) and `constants` (the env var name table). Added preemptively — not yet wired into any service — for stocks, jobs, holidays, and search to share one way of building a Postgres connection config, instead of four near-identical copies.
+
+**Why it belongs in `internal/shared` and not per-service `internal/config`:** the *shape* of "load these DB env vars into a `DbConfig`" is identical across every Postgres-backed service — same bar that justified pulling the connector pattern out. Each service still supplies its own `Schema` value and its own credentials at the env-var level, so this doesn't touch the one-schema-per-service data-ownership rule — it's shared connection-*building* code, not shared data access.
+
+---
+
 ## Weather: weatherstack, not Open-Meteo
 
 API is `https://api.weatherstack.com/current`, key via `access_key` query param (`WEATHERSTACK_API_KEY`).
