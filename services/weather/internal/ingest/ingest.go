@@ -27,7 +27,7 @@ func (c *Client) Fetch(ctx context.Context) ([]model.Weather, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
-	resp, err := client.Get(c.config.GetCurrentUrl("21117"))
+	resp, err := client.Get(c.config.GetCurrentUrl())
 	if err != nil {
 		slog.Error("exception occured returning weather service.", "error", err)
 		return nil, err
