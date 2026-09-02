@@ -8,6 +8,8 @@ GitHub issues are the source of truth for backlog/status (`gh issue list --repo 
 
 `GET https://api.weatherstack.com/current` → `NormalizedWeather`, plus tests for API errors and success. This is the `Fetch(ctx) ([]NormalizedX, error)` connector piece specifically — the Redis cache/shadow-key poller is separate work (#13), and the TTL/cadence calculator is separate again (#14). Before writing the mapper: confirm the actual weatherstack free-tier call limit at signup (`facts.md` flags conflicting numbers on their own site) so #14's math starts from a real number, not the ~100/month placeholder.
 
+**Landed on this branch ahead of schedule:** `internal/shared/managers`' generic Redis manager (the cache wrapper #13's shadow-key poller will sit on top of) — not connector-shaped ingestion, so it's not really #12's scope, but it's here now. See [[decisions#redis-manager-shared]] for why it's shared rather than weather-local, and [[bugs#redis-manager-first-draft]] for what the review caught and fixed.
+
 ## Open backlog, by service
 
 **Weather** — #12 (connector), #13 (Redis cache + shadow-key poller), #14 (TTL/cadence calculator + docs). Natural build order: #12 → #13 → #14, since #14's formula needs #13's key shapes to exist first.

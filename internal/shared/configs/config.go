@@ -2,27 +2,20 @@ package configs
 
 import (
 	"fmt"
-	"log/slog"
-	"os"
 	"strconv"
 
 	"github.com/corvian/argus/internal/shared/constants"
 
 	db "github.com/akhakpouri/gorm-kit/database"
-	"github.com/lpernett/godotenv"
 )
 
 type Config struct {
 	Database db.DbConfig
+	Redis    RedisConfig
 }
 
 func NewConfig() *Config {
-	if _, err := os.Stat("configs/dev.env"); err == nil {
-		if err = godotenv.Load("configs/dev.env"); err != nil {
-			slog.Error("Error loading configs/dev.env", "error", err)
-		}
-	}
-
+	LoadEnvFileIfExists("configs/dev.env")
 	portStr := GetEnvOrPanic(constants.EnvKeys.DBPort)
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
@@ -39,17 +32,19 @@ func NewConfig() *Config {
 			SSLMode:  GetEnvOrPanic(constants.EnvKeys.DBSSLMode),
 			Schema:   GetEnvOrPanic(constants.EnvKeys.DBSchema),
 		},
+		Redis: RedisConfig{
+			Host:     GetEnvOrPanic(constants.EnvKeys.RedisHost),
+			Port:     GetEnvOrPanic(constants.EnvKeys.RedisPort),
+			Db:       GetEnvOrDefaultToInt(constants.EnvKeys.RedisDb, 0),
+			Password: GetEnvOrPanic(constants.EnvKeys.RedisPassword),
+		},
 	}
 
 	return c
 }
 
 func NewDbConfig() *db.DbConfig {
-	if _, err := os.Stat("configs/dev.env"); err == nil {
-		if err = godotenv.Load("configs/dev.env"); err != nil {
-			slog.Error("Error loading configs/dev.env", "error", err)
-		}
-	}
+	LoadEnvFileIfExists("configs/dev.env")
 
 	portStr := GetEnvOrPanic(constants.EnvKeys.DBPort)
 	port, err := strconv.Atoi(portStr)
@@ -68,4 +63,15 @@ func NewDbConfig() *db.DbConfig {
 	}
 
 	return c
+}
+
+func NewRedisConfig() *RedisConfig {
+	LoadEnvFileIfExists("configs/dev.env")
+	c := RedisConfig{
+		Host:     GetEnvOrPanic(constants.EnvKeys.RedisHost),
+		Port:     GetEnvOrPanic(constants.EnvKeys.RedisPort),
+		Db:       GetEnvOrDefaultToInt(constants.EnvKeys.RedisDb, 0),
+		Password: GetEnvOrPanic(constants.EnvKeys.RedisPassword),
+	}
+	return &c
 }

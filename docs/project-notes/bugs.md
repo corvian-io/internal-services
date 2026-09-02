@@ -52,6 +52,24 @@ Runtime bugs with root cause and fix go here once services are running. Nothing 
 
 ---
 
+## Redis manager first draft: dependency not declared, plus a few rough edges {#redis-manager-first-draft}
+
+**Mistake:** `internal/shared/managers/redis_manager.go` imported `github.com/redis/go-redis/v9` directly, but `internal/shared/go.mod` was never tidied for it — the dependency only showed up (as `// indirect`) in `services/weather/go.mod`, which happened to pull it in transitively.
+
+**Root cause:** `go.work` unions the module graph across the whole workspace, so the build succeeded locally even though the wrong module declared the dependency — confirmed by building `internal/shared` standalone with `GOWORK=off`, which failed to resolve the import until `go mod tidy` was run inside `internal/shared` itself.
+
+**Fix:** ran `go mod tidy` in `internal/shared`; it's now a direct dependency there, not an indirect one in weather's `go.mod`.
+
+**Also caught in the same review, all fixed:**
+- `Save` did an `Exists` check + `Del` before writing — dead work, since Redis `SET` already overwrites an existing key and its TTL. Removed; `Save` now marshals and `SET`s directly.
+- A doc comment above `Save` read `// Connect implements [RedisManagerI]` — copy-paste leftover referencing a method that doesn't exist on this interface. Corrected to reference `Save`.
+- `getHost(cfg)` duplicated `RedisConfig.GetHostAddress()`, added in the same change. Removed; `NewRedisManager` now calls `cfg.GetHostAddress()`.
+- `services/weather/internal/config/config.go` imported `internal/shared/configs` twice under two different names (`configs` and `cfg`). Removed the redundant import.
+
+**Status:** fixed, not yet committed.
+
+---
+
 ## Search: ranking logic embedded in the schema {#search-ranking-in-schema}
 
 **Mistake:** an earlier design put relevance weighting into a `generated always as (...)` column.

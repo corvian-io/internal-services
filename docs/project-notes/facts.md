@@ -82,3 +82,13 @@ Config structure, endpoints, and constants. This file is checked into git, so it
 - Env vars: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`, `DB_SCHEMA` (see `constants.EnvKeys`).
 - External dependency: `github.com/akhakpouri/gorm-kit` for the `DbConfig` type itself, plus `godotenv` for local `.env` loading.
 - Not wired into any service yet — added ahead of stocks/jobs/holidays/search needing it, all four being Postgres-backed.
+
+## Shared Redis manager
+
+- Location: `internal/shared/managers` (same `internal/shared` module as the connector pattern and Postgres config).
+- `RedisManagerI[T]` / `RedisManager[T]`: `Get`, `Save`, `Exists`, `Close` — generic over the stored value type, JSON-marshaled on `Save` and unmarshaled on `Get`.
+- `NewRedisManager[T](cfg configs.RedisConfig) RedisManagerI[T]` wraps `redis/go-redis/v9`.
+- Config: `configs.RedisConfig` (`Host`, `Port`, `Db`, `Password`), built via `configs.NewRedisConfig()` or as the `Redis` field on `configs.NewConfig()`'s `Config`.
+- Env vars: `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB` (defaults to `0` if unset), `REDIS_PASSWORD` (see `constants.EnvKeys`).
+- External dependency: `github.com/redis/go-redis/v9`, declared as a direct dependency in `internal/shared/go.mod`.
+- First (only, so far) consumer: Weather's shadow-key cache — see `services/weather/CLAUDE.md` for the actual key shapes and TTLs.

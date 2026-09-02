@@ -2,12 +2,8 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
-	"os"
 
 	cfg "github.com/corvian/argus/internal/shared/configs"
-
-	"github.com/lpernett/godotenv"
 )
 
 type Config struct {
@@ -21,11 +17,7 @@ func (c *Config) GetCurrentUrl() string {
 }
 
 func NewConfig() *Config {
-	if _, err := os.Stat(".env"); err == nil {
-		if err = godotenv.Load(".env"); err != nil {
-			slog.Error("Error loading .env", "error", err)
-		}
-	}
+	cfg.LoadEnvFileIfExists(".env")
 
 	c := &Config{
 		ApiKey:  cfg.GetEnvOrDefault(EnvKeys.ApiKey, ""),

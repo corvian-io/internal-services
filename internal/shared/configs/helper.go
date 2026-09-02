@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+
+	"github.com/lpernett/godotenv"
 )
 
 func GetEnvOrPanic(key string) string {
@@ -38,4 +40,12 @@ func GetEnvOrDefaultToInt(key string, defaultValue int) int {
 	}
 
 	return num
+}
+
+func LoadEnvFileIfExists(filePath string) {
+	if _, err := os.Stat(filePath); err == nil {
+		if err = godotenv.Load(filePath); err != nil {
+			slog.Error(fmt.Sprintf("Error loading %s", filePath), "error", err)
+		}
+	}
 }

@@ -106,6 +106,16 @@ Alongside the connector pattern, `internal/shared` now also holds `configs` (env
 
 ---
 
+## `internal/shared` gains a generic Redis manager (`managers` package) {#redis-manager-shared}
+
+Alongside `configs`/`constants`, `internal/shared/managers` now holds a generic `RedisManagerI[T]` / `RedisManager[T]` (`Get`, `Save`, `Exists`, `Close`) wrapping `redis/go-redis`, built from `configs.RedisConfig` via `configs.NewRedisConfig()`. First consumer is Weather's shadow-key cache (see `services/weather/CLAUDE.md`), but the shape is generic over `T` and not weather-domain logic.
+
+**Why it belongs in `internal/shared` and not `services/weather/internal`:** same reasoning as the Postgres config loader above — Weather is the only service using Redis today, but "marshal a value into a key with a TTL, check existence" is generic caching plumbing. Any future service that earns the same Redis-instead-of-Postgres exception (see the Weather exception above — guardrail: explicit justification required, not silent drift) reuses this instead of hand-rolling its own client wrapper.
+
+**First-draft rough edges caught in review, since fixed** — see [[bugs#redis-manager-first-draft]].
+
+---
+
 ## Weather: weatherstack, not Open-Meteo
 
 API is `https://api.weatherstack.com/current`, key via `access_key` query param (`WEATHERSTACK_API_KEY`).
